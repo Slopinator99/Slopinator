@@ -1,0 +1,19 @@
+# build output
+build/
+build2/
+build_dbg/
+build_static/
+release/
+# local runtime folders: config, DATs, downloaded tools, dumps and logs
+dist/
+data/
+config.json
+status.json
+*.log
+*.bin
+*.cue
+*.iso
+*.chd
+*.scram
+*.state
+*.subcode
