@@ -205,6 +205,8 @@ int lastC2Samples(const DumpRequest &r);
 QVector<int> eccBadLbas(const QString &redumper, const DumpRequest &r);
 // Flags those sectors (and a few neighbours) as unread in the .state file so the next refine re-reads them.
 bool markForReread(const DumpRequest &r, const QVector<int> &lbas);
+// Serial from the BOOT/BOOT2 line of SYSTEM.CNF inside an iso or bin (empty if there is none).
+QString imageSerial(const QString &path);
 QString dumpFolder(const DumpRequest &r);
 
 } // namespace core

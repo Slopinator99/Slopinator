@@ -398,6 +398,8 @@ static QString extractSerial(const QString &path)
     return m.hasMatch() ? m.captured(1).toUpper() + "-" + m.captured(2) + m.captured(3) : QString();
 }
 
+QString imageSerial(const QString &path) { return extractSerial(path); }
+
 static QString romNameIn(const DatIndex &dat, const QString &game, const QString &md5)
 {
     for (const auto &rom : dat.games.value(game))

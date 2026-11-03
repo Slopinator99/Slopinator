@@ -75,6 +75,12 @@ Entry readEntry(const QString &folder)
             }
         }
     }
+    // No (valid) serial recorded: read it from the dump itself, so old records fix themselves.
+    if (e.serial.isEmpty() && e.hasOriginal) {
+        QString image;
+        for (const QString &n : d.entryList({"*.iso", "*.bin"}, QDir::Files, QDir::Name)) { image = d.filePath(n); break; }
+        if (!image.isEmpty()) e.serial = core::imageSerial(image);
+    }
     return e;
 }
 
