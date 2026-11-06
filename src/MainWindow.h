@@ -70,7 +70,7 @@ private:
 
     QTabWidget *m_tabs;
     // dump tab
-    QComboBox *m_dPlatform, *m_dDrive;
+    QComboBox *m_dPlatform, *m_dDrive, *m_dEngine;
     QLineEdit *m_dName, *m_dOut;
     QLineEdit *m_dSpeed;
     QSpinBox *m_dRetries;
@@ -84,7 +84,7 @@ private:
     // verify tab
     QComboBox *m_vPlatform;
     QLineEdit *m_vFolder;
-    QPushButton *m_vGo, *m_vRename, *m_vFix;
+    QPushButton *m_vGo, *m_vRename, *m_vFix, *m_vSubmit;
     QProgressBar *m_vBar;
     QLabel *m_vBanner;
     QTextEdit *m_vOut;

@@ -20,6 +20,7 @@
 #include "Library.h"
 #include "Runner.h"
 #include "Setup.h"
+#include "Submission.h"
 
 namespace cli {
 
@@ -27,7 +28,7 @@ static QTextStream &out() { static QTextStream s(stdout); return s; }
 static QTextStream &err() { static QTextStream s(stderr); return s; }
 
 static const QStringList kCommands = {"verify", "dump", "drives", "update-dat", "config", "help",
-                                      "install-menu", "uninstall-menu", "library", "compress", "setup", "--help", "-h", "--version"};
+                                      "install-menu", "uninstall-menu", "library", "compress", "setup", "dic-dump", "submission", "--help", "-h", "--version"};
 
 bool wantsCli(const QStringList &args) { return args.size() > 1 && kCommands.contains(args[1]); }
 
@@ -351,6 +352,7 @@ static int doSetup(const Opts &o)
     QList<setup::Tool> tools;
     if (o.pos.isEmpty() || o.pos[0] == "redumper") tools << setup::Tool::Redumper;
     if (o.pos.isEmpty() || o.pos[0] == "chdman") tools << setup::Tool::Chdman;
+    if (!o.pos.isEmpty() && o.pos[0] == "dic") tools << setup::Tool::Dic;
     int rc = 0;
     for (auto t : tools) {
         const QString name = setup::toolName(t);
@@ -368,6 +370,46 @@ static int doSetup(const Opts &o)
     out().flush();
     err().flush();
     return rc;
+}
+
+static int doDicDump(const Opts &o)
+{
+    core::Config cfg = core::loadConfig();
+    const QString exe = setup::findDic(cfg);
+    if (exe.isEmpty()) { err() << "DiscImageCreator is missing; run: psxrdc2 setup dic --yes\n"; err().flush(); return 3; }
+    if (!o.kv.contains("--drive") || !o.kv.contains("--name")) { usage(); return 3; }
+    const QString drive = o.kv["--drive"].left(1).toUpper();
+    const QString name = o.kv["--name"];
+    const QString outDir = QDir::fromNativeSeparators(o.kv.value("--out", cfg.outputDir)) + "/" + name;
+    const core::DiscProbe pr = core::probeDisc(drive + ":");
+    if (QFileInfo::exists(outDir) && !QDir(outDir).isEmpty()) { err() << "error: " << outDir << " is not empty\n"; err().flush(); return 3; }
+    QDir().mkpath(outDir);
+    const QString speed = o.kv.value("--speed", pr.isDvd ? "8" : cfg.speed);
+    QStringList args;
+    if (pr.isDvd) args << "dvd" << drive << QDir::toNativeSeparators(outDir + "/" + name + ".iso") << speed;
+    else args << "cd" << drive << QDir::toNativeSeparators(outDir + "/" + name + ".bin") << speed << "/c2" << "/nl";
+    out() << "running DiscImageCreator " << args.join(' ') << "\n"; out().flush();
+    QProcess p;
+    p.setProcessChannelMode(QProcess::ForwardedChannels);
+    p.setWorkingDirectory(QFileInfo(exe).absolutePath());
+    p.start(exe, args);
+    p.write("\n");   // it waits for a key press at the end
+    p.closeWriteChannel();
+    p.waitForFinished(-1);
+    if (p.exitCode() != 0) { err() << "DiscImageCreator exited with code " << p.exitCode() << "\n"; err().flush(); return 3; }
+    out() << "dump written to " << outDir << "\nnext: psxrdc2 verify, then psxrdc2 submission\n";
+    out().flush();
+    return 0;
+}
+
+static int doSubmission(const Opts &o)
+{
+    if (o.pos.isEmpty()) { usage(); return 3; }
+    QString txt, zip, e;
+    if (!submission::write(o.pos[0], &txt, &zip, &e)) { err() << "error: " << e << "\n"; err().flush(); return 3; }
+    out() << "info file: " << txt << "\nlogs zip : " << zip << "\n";
+    out().flush();
+    return 0;
 }
 
 static int doUpdateDat(const Opts &o)
@@ -412,7 +454,7 @@ static int doConfig(const Opts &o)
 int run(const QStringList &args)
 {
     const QString cmd = args.value(1);
-    if (cmd == "--version") { out() << "psxrdc2 0.1\n"; out().flush(); return 0; }
+    if (cmd == "--version") { out() << "psxrdc2 0.2\n"; out().flush(); return 0; }
     if (cmd == "help" || cmd == "--help" || cmd == "-h") { usage(); return 0; }
     const Opts o = parse(args);
     if (cmd == "verify") return doVerify(o);
@@ -420,6 +462,8 @@ int run(const QStringList &args)
     if (cmd == "drives") return doDrives();
     if (cmd == "update-dat") return doUpdateDat(o);
     if (cmd == "setup") return doSetup(o);
+    if (cmd == "dic-dump") return doDicDump(o);
+    if (cmd == "submission") return doSubmission(o);
     if (cmd == "config") return doConfig(o);
     if (cmd == "library") return doLibrary(o);
     if (cmd == "compress") return doCompress(o);

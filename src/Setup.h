@@ -8,7 +8,7 @@
 // First-run helper: fetches the external tools this program does not contain into its own folder.
 namespace setup {
 
-enum class Tool { Redumper, Chdman };
+enum class Tool { Redumper, Chdman, Dic };
 
 struct Release {
     QString tag;
@@ -16,6 +16,7 @@ struct Release {
     QString name;
     qint64 size = 0;
     QString sha256;     // expected hash, if the release publishes one
+    bool selfRecorded = false;  // hash recorded by this program's author, not published by the tool's author
 };
 
 QString toolName(Tool t);
@@ -29,3 +30,8 @@ bool latest(Tool t, Release *out, QString *err);
 QString install(Tool t, const Release &rel, const std::function<void(qint64, qint64)> &progress, QString *err);
 
 } // namespace setup
+
+namespace setup {
+// DiscImageCreator (saramibreak): second dump engine, installed into <data>/dic.
+QString findDic(const core::Config &cfg);
+}

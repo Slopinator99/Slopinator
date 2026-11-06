@@ -32,6 +32,9 @@ psxrdc2 verify <folder> [--platform psx|ps2] [--json] [--diagnose] [--fix] [--re
 psxrdc2 dump --drive H: --name NAME [--platform psx|ps2] [--out DIR] [--speed N] [--retries N] [--overwrite]
 psxrdc2 library [FOLDER] [--verify]
 psxrdc2 compress <folder> [--delete-originals] [--delete-scratch]
+psxrdc2 setup dic --yes     (optional second engine: DiscImageCreator)
+psxrdc2 dic-dump --drive H: --name NAME [--out DIR] [--speed N]
+psxrdc2 submission <folder>   (Redump submission summary + zip of the logs)
 psxrdc2 drives | config | install-menu | uninstall-menu
 ```
 
@@ -53,10 +56,13 @@ Source (`src/`), the CMake build, the single-file build script, the NSIS install
 Not included: build output, the installer exe (published under Releases instead), Redump DAT files, downloaded tools,
 your config and any dump files. The program recreates all of that on its own.
 
-## Third-party software
+## Credits
 
-redumper (GPL-3.0), chdman from MAME (BSD-3-Clause / GPL-2.0+) and the Redump DATs are downloaded by the user on request and are not part of this repository.
-The program links Qt 6 (LGPL-3.0) statically; the Qt source and licence terms are at [qt.io](https://www.qt.io).
+Slopinator stands on the work of others: [Redump](http://redump.org) (the database and the dumping standards),
+[redumper](https://github.com/superg/redumper) by superg, [DiscImageCreator](https://github.com/saramibreak/DiscImageCreator) by saramibreak,
+chdman from [MAME](https://github.com/mamedev/mame), and [Qt](https://www.qt.io). None of those tools are part of this repository;
+they are downloaded on request and keep their own licences. Full list and licence details: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+Not affiliated with or endorsed by Redump.
 
 ## Notes
 

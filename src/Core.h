@@ -193,11 +193,20 @@ struct DumpRequest {
     bool overwrite = false;
     bool dvd = false;               // DVD media: no CD drive profile / CD-only options
     QStringList extraArgs;          // passed to redumper unchanged (advanced)
+    QString engine = "redumper";    // see engines(): who does the dump
     QString command = "disc";       // "disc" (full dump), "refine" (re-read bad sectors) or "split"
     bool overreadLeadout = false;   // read the lead-out past 100 sectors (generic drives)
     DriveProfile profile;       // applied when valid()
 };
 QStringList buildDumpArgs(const DumpRequest &r);
+
+// Dump engines the GUI can pick from. Adding one means: an entry here, a tool in Setup, an argument
+// builder, and (if its progress output differs) a progress pattern in Runner.
+struct EngineInfo {
+    QString id, name, note;
+};
+const QVector<EngineInfo> &engines();
+QStringList buildDicArgs(const DumpRequest &r);     // DiscImageCreator arguments (exe path not included)
 // C2 error samples redumper reported in its most recent pass (-1 if the log has none).
 int lastC2Samples(const DumpRequest &r);
 // Sectors of a finished CD dump whose data fails the ECC/EDC check (from `redumper info`).

@@ -13,7 +13,8 @@ public:
     explicit Runner(QObject *parent = nullptr);
     bool running() const;
     // Returns false (with err) if it cannot start.
-    bool start(const QString &redumper, const core::DumpRequest &req, QString *err);
+    // `exe` is the engine selected by req.engine.
+    bool start(const QString &exe, const core::DumpRequest &req, QString *err);
     void cancel();
 
 signals:
@@ -29,4 +30,5 @@ private:
     QByteArray m_buf;
     QFile *m_log = nullptr;
     QStringList m_phases;
+    bool m_dic = false;
 };

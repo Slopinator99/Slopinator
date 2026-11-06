@@ -3,6 +3,9 @@
 #include "Library.h"
 #include "LibraryTab.h"
 #include "Setup.h"
+#include "Submission.h"
+#include <QDesktopServices>
+#include <QUrl>
 
 #include <QApplication>
 #include <QProgressDialog>
@@ -171,6 +174,9 @@ QWidget *MainWindow::buildDumpTab()
     m_dNote->setStyleSheet("color: #b26a00;");
     m_dExtra = new QLineEdit;
     m_dExtra->setPlaceholderText("advanced: extra redumper arguments, e.g. --dvd-raw");
+    m_dEngine = new QComboBox;
+    for (const auto &e : engines()) m_dEngine->addItem(e.name, e.id);
+    form->addRow("Engine", m_dEngine);
     form->addRow("Platform", m_dPlatform);
     form->addRow("", m_dNote);
     form->addRow("Drive", driveRow);
@@ -213,6 +219,18 @@ QWidget *MainWindow::buildDumpTab()
         m_dNote->setText(platformInfo(dumpPlatform()).dumpNote);
     });
     m_dNote->setText(platformInfo(dumpPlatform()).dumpNote);
+    // Settings that only mean something to redumper.
+    auto engineChanged = [this] {
+        const bool rd = m_dEngine->currentData().toString() == "redumper";
+        for (QWidget *x : {static_cast<QWidget *>(m_dProfile), static_cast<QWidget *>(m_dOverread), static_cast<QWidget *>(m_dExtra),
+                           static_cast<QWidget *>(m_dRetries), static_cast<QWidget *>(m_dAutoFix)})
+            x->setEnabled(rd);
+        for (const auto &e : engines())
+            if (e.id == m_dEngine->currentData().toString())
+                m_dNote->setText(platformInfo(dumpPlatform()).dumpNote + (rd || e.note.isEmpty() ? QString() : "\n" + e.note));
+    };
+    connect(m_dEngine, &QComboBox::currentIndexChanged, this, engineChanged);
+    engineChanged();
     connect(m_dStart, &QPushButton::clicked, this, &MainWindow::startDump);
     connect(m_dCancel, &QPushButton::clicked, this, [this] { m_runner.cancel(); });
     connect(m_dDrive, &QComboBox::currentTextChanged, this, [this] { refreshProfileLabel(); });
@@ -233,12 +251,15 @@ QWidget *MainWindow::buildVerifyTab()
     m_vRename->setEnabled(false);
     m_vFix = new QPushButton("Apply offset fix");
     m_vFix->setEnabled(false);
+    m_vSubmit = new QPushButton("Submission files");
+    m_vSubmit->setToolTip("Write the Redump submission summary and a zip of the unmodified logs into the dump folder");
     top->addWidget(m_vPlatform);
     top->addWidget(m_vFolder, 1);
     top->addWidget(browseButton(m_vFolder, false, w));
     top->addWidget(m_vGo);
     top->addWidget(m_vFix);
     top->addWidget(m_vRename);
+    top->addWidget(m_vSubmit);
     v->addLayout(top);
     m_vBar = new QProgressBar;
     m_vBanner = new QLabel;
@@ -250,6 +271,16 @@ QWidget *MainWindow::buildVerifyTab()
     v->addWidget(barWithPercent(m_vBar));
     v->addWidget(m_vBanner);
     v->addWidget(m_vOut, 1);
+    connect(m_vSubmit, &QPushButton::clicked, this, [this] {
+        const QString folder = m_vFolder->text();
+        QString txt, zip, e;
+        if (folder.isEmpty() || !submission::write(folder, &txt, &zip, &e)) {
+            QMessageBox::warning(this, "Submission files", folder.isEmpty() ? "Pick a dump folder first." : e);
+            return;
+        }
+        m_vOut->append(QString("\nSubmission files written:\n  ") + txt + "\n  " + zip);
+        QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(txt).absolutePath()));
+    });
     connect(m_vRename, &QPushButton::clicked, this, &MainWindow::renameLast);
     connect(m_vFix, &QPushButton::clicked, this, &MainWindow::applyFixes);
     connect(m_vGo, &QPushButton::clicked, this, [this] {
@@ -273,12 +304,15 @@ bool MainWindow::downloadTool(setup::Tool t, bool confirm)
         if (!ok) { QMessageBox::warning(this, "Download " + name, "Could not look up the newest release:\n" + err); return false; }
     }
     if (confirm) {
-        const QString src = t == setup::Tool::Redumper ? "github.com/superg/redumper" : "github.com/mamedev/mame";
-        const QString note = t == setup::Tool::Chdman
+        const QString src = t == setup::Tool::Redumper ? "github.com/superg/redumper"
+                          : t == setup::Tool::Dic ? "github.com/saramibreak/DiscImageCreator" : "github.com/mamedev/mame";
+        QString note = t == setup::Tool::Chdman
             ? "\n\nThis is the whole MAME package; only chdman.exe is taken out of it and the rest is thrown away."
             : QString();
+        if (rel.selfRecorded)
+            note = "\n\nThe author publishes no checksum. The SHA-256 checked here was recorded by this program's author when the file was first downloaded, so it detects a changed file but is not an official value.";
         if (QMessageBox::question(this, "Download " + name,
-                QString("Download %1 (%2) from %3?\n\nFile: %4 (%5)\nIts SHA-256 is checked against the published value before anything is kept.%6\n\nIt goes into: %7")
+                QString("Download %1 (%2) from %3?\n\nFile: %4 (%5)\nIts SHA-256 is checked before anything is kept.%6\n\nIt goes into: %7")
                     .arg(name, rel.tag, src, rel.name, humanSize(rel.size), note, dataDir()),
                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
             return false;
@@ -294,7 +328,8 @@ bool MainWindow::downloadTool(setup::Tool t, bool confirm)
     }, &err);
     pd.close();
     if (path.isEmpty()) { QMessageBox::warning(this, "Download " + name, "Failed:\n" + err); return false; }
-    if (t == setup::Tool::Redumper) { m_cfg.redumperPath = path; m_sRedumper->setText(path); }
+    if (t == setup::Tool::Dic) { /* found by location, nothing to store */ }
+    else if (t == setup::Tool::Redumper) { m_cfg.redumperPath = path; m_sRedumper->setText(path); }
     else { m_cfg.chdmanPath = path; m_sChdman->setText(path); }
     saveConfig(m_cfg);
     m_dLog->appendPlainText("installed " + name + " " + rel.tag + " -> " + path);
@@ -326,11 +361,25 @@ QWidget *MainWindow::buildSettingsTab()
     getRedumper->setToolTip("Fetches the newest redumper from github.com/superg/redumper into this program's folder");
     getChdman->setToolTip("Fetches chdman.exe from the newest MAME release (github.com/mamedev/mame) into this program's folder");
     connect(getRedumper, &QPushButton::clicked, this, [this] { downloadTool(setup::Tool::Redumper); });
+    auto *about = new QPushButton("About && credits");
+    connect(about, &QPushButton::clicked, this, [this] {
+        QMessageBox::about(this, "About Slopinator",
+            "<b>Slopinator</b> (MIT licence, Slopinator99)<br><br>"
+            "Built on the work of:<ul>"
+            "<li><a href='http://redump.org'>Redump</a>: the database and dumping standards</li>"
+            "<li><a href='https://github.com/superg/redumper'>redumper</a> by superg (GPL-3.0)</li>"
+            "<li><a href='https://github.com/saramibreak/DiscImageCreator'>DiscImageCreator</a> by saramibreak (Apache-2.0)</li>"
+            "<li>chdman from <a href='https://github.com/mamedev/mame'>MAME</a> (BSD-3-Clause / GPL-2.0+)</li>"
+            "<li><a href='https://www.qt.io'>Qt 6</a> (LGPL-3.0, linked statically)</li></ul>"
+            "These tools are downloaded on request and keep their own licences. "
+            "Not affiliated with or endorsed by Redump.<br>See THIRD-PARTY-NOTICES.md.");
+    });
     connect(getChdman, &QPushButton::clicked, this, [this] { downloadTool(setup::Tool::Chdman); });
     auto *btns = new QHBoxLayout;
     btns->addWidget(save);
     btns->addWidget(getRedumper);
     btns->addWidget(getChdman);
+    btns->addWidget(about);
     btns->addStretch(1);
     v->addLayout(btns);
 
@@ -433,8 +482,13 @@ void MainWindow::refreshProfileLabel()
 
 void MainWindow::startDump()
 {
-    const QString redumper = findRedumper(m_cfg);
-    if (redumper.isEmpty()) { QMessageBox::warning(this, "redumper", "Set the redumper.exe path in Settings."); return; }
+    const QString engine = m_dEngine->currentData().toString();
+    QString redumper = engine == "dic" ? setup::findDic(m_cfg) : findRedumper(m_cfg);
+    if (redumper.isEmpty() && engine == "dic" && downloadTool(setup::Tool::Dic)) redumper = setup::findDic(m_cfg);
+    if (redumper.isEmpty()) {
+        if (engine != "dic") QMessageBox::warning(this, "redumper", "Set the redumper.exe path in Settings.");
+        return;
+    }
     if (m_dDrive->currentData().toString().isEmpty() || m_dName->text().trimmed().isEmpty()) {
         QMessageBox::warning(this, "Dump", "Pick a drive and enter a name.");
         return;
@@ -443,6 +497,7 @@ void MainWindow::startDump()
     m_refinePass = 0;
     m_eccPass = 0;
     m_req = DumpRequest();
+    m_req.engine = engine;
     m_req.platform = dumpPlatform();
     m_req.drive = m_dDrive->currentData().toString();
     m_req.name = m_dName->text().trimmed();
@@ -484,7 +539,10 @@ void MainWindow::onDumpFinished(int code, bool crashed)
     const bool failed = code != 0 || crashed;
     const QString redumper = findRedumper(m_cfg);
     QString startErr;
-    if (m_req.command == "disc" && !m_req.dvd
+    const bool redumperRun = m_req.engine == "redumper";
+    if (!redumperRun) {
+        // single plain pass: nothing to refine
+    } else if (m_req.command == "disc" && !m_req.dvd
         && (lastC2Samples(m_req) > 0
             || (failed && pickLog(dumpFolder(m_req)).errors.join(' ').contains("data errors detected")))) {
         m_dLog->appendPlainText("data errors remain after the dump: re-reading the bad sectors slowly (4x)");
@@ -538,7 +596,7 @@ void MainWindow::onDumpFinished(int code, bool crashed)
     m_dStart->setEnabled(true);
     m_dCancel->setEnabled(false);
     if (code != 0 || crashed) {
-        m_dStatus->setText(QString("redumper exited with code %1").arg(code));
+        m_dStatus->setText(QString("%1 exited with code %2").arg(redumperRun ? "redumper" : "DiscImageCreator").arg(code));
         const LogInfo fl = pickLog(dumpFolder(m_req));
         QString why = fl.errors.isEmpty() ? QString("redumper exited with code %1").arg(code) : fl.errors.last();
         if (m_req.command == "split" && m_refinePass > 0)
@@ -549,7 +607,7 @@ void MainWindow::onDumpFinished(int code, bool crashed)
     m_dBar->setValue(100);
     const QString folder = dumpFolder(m_req);
     const LogInfo li = pickLog(folder);
-    const DriveProfile prof = profileFromLog(li);
+    const DriveProfile prof = redumperRun ? profileFromLog(li) : DriveProfile();
     if (prof.valid()) {
         m_cfg.profiles[m_req.drive] = prof;
         saveConfig(m_cfg);

@@ -295,6 +295,8 @@ Section "Install"
     FileClose $0
   ${EndIf}
   File "..\build_static\${EXE}"
+  File "..\THIRD-PARTY-NOTICES.md"
+  File "..\LICENSE"
   ${If} $Portable == 1
     FileOpen $0 "$INSTDIR\portable.flag" w
     FileWrite $0 "Settings, Redump data and downloaded tools live next to the exe while this file exists."
@@ -339,6 +341,8 @@ Section "Uninstall"
   ExecWait '"$INSTDIR\${EXE}" uninstall-menu'
   Delete "$INSTDIR\${EXE}"
   Delete "$INSTDIR\uninstall.exe"
+  Delete "$INSTDIR\THIRD-PARTY-NOTICES.md"
+  Delete "$INSTDIR\LICENSE"
   RMDir "$INSTDIR"
   Delete "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk"
   Delete "$SMPROGRAMS\${APPNAME}\Uninstall.lnk"

@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QRegularExpression>
 
 Runner::Runner(QObject *parent) : QObject(parent) {}
@@ -15,7 +16,7 @@ bool Runner::start(const QString &redumper, const core::DumpRequest &req, QStrin
     if (!QDir().mkpath(folder)) { if (err) *err = "cannot create " + folder; return false; }
 
     if (m_log) m_log->deleteLater();
-    m_log = new QFile(QDir(folder).filePath(req.name + "_redumper_stdout.log"), this);
+    m_log = new QFile(QDir(folder).filePath(req.name + (req.engine == "dic" ? "_dic_stdout.log" : "_redumper_stdout.log")), this);
     // refine / split continue the same log instead of wiping the original dump's output
     const auto mode = req.command == "disc" ? QIODevice::WriteOnly | QIODevice::Truncate
                                             : QIODevice::WriteOnly | QIODevice::Append;
@@ -26,7 +27,8 @@ bool Runner::start(const QString &redumper, const core::DumpRequest &req, QStrin
     if (m_proc) m_proc->deleteLater();
     m_proc = new QProcess(this);
     m_proc->setProcessChannelMode(QProcess::MergedChannels);
-    m_proc->setWorkingDirectory(folder);
+    // DiscImageCreator looks for default.dat and EccEdc next to itself.
+    m_proc->setWorkingDirectory(req.engine == "dic" ? QFileInfo(redumper).absolutePath() : folder);
 #ifdef Q_OS_WIN
     m_proc->setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *a) {
         a->flags |= 0x08000000;     // CREATE_NO_WINDOW
@@ -44,7 +46,8 @@ bool Runner::start(const QString &redumper, const core::DumpRequest &req, QStrin
         m_log->close();
         emit finished(code, st == QProcess::CrashExit);
     });
-    const QStringList args = core::buildDumpArgs(req);
+    m_dic = req.engine == "dic";
+    const QStringList args = m_dic ? core::buildDicArgs(req) : core::buildDumpArgs(req);
     emit logLine("launching: " + redumper + " " + args.join(' '));
     m_proc->start(redumper, args);
     return true;
@@ -87,6 +90,17 @@ void Runner::feed(const QByteArray &chunk)
     for (const QByteArray &raw : lines) {
         const QString s = QString::fromUtf8(raw).trimmed();
         if (s.isEmpty()) continue;
+        if (m_dic) {
+            // DiscImageCreator: "Creating iso(LBA)  64/ 1491408" (DVD), "... (LBA) 123/ 456" (CD)
+            static const QRegularExpression dicProg(R"(\(LBA\)\s*(\d+)/\s*(\d+))");
+            if (const auto m = dicProg.match(s); m.hasMatch()) {
+                const qint64 lba = m.captured(1).toLongLong(), total = m.captured(2).toLongLong();
+                emit progress(total > 0 ? int(lba * 100 / total) : 0, lba, total, 0, 0, 0);
+                continue;
+            }
+            emit logLine(s);
+            continue;
+        }
         if (const auto m = spin.match(s); m.hasMatch()) {
             const QString errs = m.captured(4);
             auto num = [&](const QRegularExpression &re) {

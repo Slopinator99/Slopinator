@@ -22,10 +22,20 @@
 
 namespace setup {
 
-QString toolName(Tool t) { return t == Tool::Redumper ? "redumper" : "chdman"; }
+QString toolName(Tool t) { return t == Tool::Redumper ? "redumper" : t == Tool::Chdman ? "chdman" : "DiscImageCreator"; }
+
+QString findDic(const core::Config &)
+{
+    for (const QString &d : {core::dataDir(), core::appDir()}) {
+        const QString p = d + "/dic/DiscImageCreator.exe";
+        if (QFileInfo::exists(p)) return p;
+    }
+    return {};
+}
 
 bool present(Tool t, const core::Config &cfg)
 {
+    if (t == Tool::Dic) return !findDic(cfg).isEmpty();
     return t == Tool::Redumper ? !core::findRedumper(cfg).isEmpty() : !chd::findChdman(cfg).isEmpty();
 }
 
@@ -55,6 +65,18 @@ static bool fetch(const QString &url, QByteArray *body, QFile *sink, QString *er
 
 bool latest(Tool t, Release *out, QString *err)
 {
+    if (t == Tool::Dic) {
+        // The author publishes no checksum, so this is the SHA-256 of the zip as downloaded on 2026-11-06.
+        Release r;
+        r.tag = "20260101";
+        r.name = "DiscImageCreator_20260101.zip";
+        r.url = "https://github.com/user-attachments/files/24401506/DiscImageCreator_20260101.zip";
+        r.size = 558657;
+        r.sha256 = "f8e4814fca491f0f713b346fb406ed6807ae514507d494d1caea0718dea06ffc";
+        r.selfRecorded = true;
+        *out = r;
+        return true;
+    }
     const QString repo = t == Tool::Redumper ? "superg/redumper" : "mamedev/mame";
     QByteArray body;
     if (!fetch("https://api.github.com/repos/" + repo + "/releases/latest", &body, nullptr, err)) return false;
@@ -129,6 +151,24 @@ QString install(Tool t, const Release &rel, const std::function<void(qint64, qin
     if (QString(h.result().toHex()).toLower() != rel.sha256) {
         if (err) *err = "the download does not match its published SHA-256; it was discarded";
         return {};
+    }
+
+    if (t == Tool::Dic) {
+        // Keep the whole folder: the exe needs default.dat, zlib1.dll and EccEdc beside it.
+        const QString x = tmp.filePath("x");
+        QDir().mkpath(x);
+        QString why;
+        if (!run("tar", {"-xf", archive, "-C", x}, &why)) { if (err) *err = why; return {}; }
+        QString exe;
+        for (QDirIterator it(x, {"DiscImageCreator.exe"}, QDir::Files, QDirIterator::Subdirectories); it.hasNext();) { exe = it.next(); break; }
+        if (exe.isEmpty()) { if (err) *err = "DiscImageCreator.exe was not found in the download"; return {}; }
+        const QString dest = core::dataDir() + "/dic";
+        QDir(dest).removeRecursively();
+        QDir().mkpath(dest);
+        const QDir src(QFileInfo(exe).absolutePath());
+        for (const QFileInfo &fi : src.entryInfoList(QDir::Files))
+            if (!QFile::copy(fi.absoluteFilePath(), dest + "/" + fi.fileName())) { if (err) *err = "cannot write " + dest; return {}; }
+        return dest + "/DiscImageCreator.exe";
     }
 
     const QString outDir = tmp.filePath("x");

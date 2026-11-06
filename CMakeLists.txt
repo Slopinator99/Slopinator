@@ -24,7 +24,9 @@ add_executable(psxrdc2 WIN32
     src/MainWindow.cpp
     src/MainWindow.h
     src/Setup.cpp
+    src/Submission.cpp
     src/Setup.h
+    src/Submission.h
     res/app.rc
 )
 target_link_libraries(psxrdc2 PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network)

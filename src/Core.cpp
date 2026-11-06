@@ -968,6 +968,24 @@ bool markForReread(const DumpRequest &r, const QVector<int> &lbas)
 
 QString dumpFolder(const DumpRequest &r) { return QDir(r.outDir).filePath(r.name); }
 
+const QVector<EngineInfo> &engines()
+{
+    static const QVector<EngineInfo> e = {
+        {"redumper", "redumper (recommended)", "Automatic re-reads of bad sectors, drive profile, PS1 and PS2."},
+        {"dic", "DiscImageCreator", "Second opinion for Redump submissions: one plain pass, no automatic re-reads. Dump the disc twice and compare."},
+    };
+    return e;
+}
+
+QStringList buildDicArgs(const DumpRequest &r)
+{
+    const QString drive = r.drive.left(1).toUpper();
+    const QString base = QDir(dumpFolder(r)).filePath(r.name);
+    const QString speed = r.speed.isEmpty() ? (r.dvd ? "8" : "24") : r.speed;
+    if (r.dvd) return {"dvd", drive, QDir::toNativeSeparators(base + ".iso"), speed};
+    return {"cd", drive, QDir::toNativeSeparators(base + ".bin"), speed, "/c2", "/nl"};
+}
+
 QStringList buildDumpArgs(const DumpRequest &r)
 {
     if (r.command == "split") {
