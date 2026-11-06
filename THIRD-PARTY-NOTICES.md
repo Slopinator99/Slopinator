@@ -1,13 +1,13 @@
 # Credits and third-party notices
 
-Slopinator is a front end. The hard work of reading discs accurately, and the database that says whether a dump is right, was done by other people.
+psxrdc2 is a front end. The hard work of reading discs accurately, and the database that says whether a dump is right, was done by other people.
 Thank you to all of them.
 
 ## Redump
 
 [Redump.org](http://redump.org) and its community maintain the DAT files and the dumping standards this program verifies against.
 The DATs are downloaded from redump.org on request; they are not included here. The Redump name, the DAT data and the wiki belong to the Redump project.
-Slopinator is an independent tool and is not affiliated with or endorsed by Redump.
+psxrdc2 is an independent tool and is not affiliated with or endorsed by Redump.
 
 ## Dump engines (downloaded on request, not distributed here)
 
@@ -17,7 +17,7 @@ Slopinator is an independent tool and is not affiliated with or endorsed by Redu
 | DiscImageCreator | saramibreak and contributors | Apache-2.0 (the bundled components carry their own licences, see its README) | https://github.com/saramibreak/DiscImageCreator |
 | chdman (from MAME) | the MAME team | BSD-3-Clause / GPL-2.0+ | https://github.com/mamedev/mame |
 
-Slopinator starts these as separate programs and shows their output; it contains none of their code. Their licences apply to the files you download.
+psxrdc2 starts these as separate programs and shows their output; it contains none of their code. Their licences apply to the files you download.
 DiscImageCreator also bundles EccEdc, DVDAuth, E_WISE_W, i6comp, unscrambler, zlib, mbedtls, unshield, tinyxml2, xxHash, abgx360 code and the AccurateRip drive-offset list;
 their authors are credited in DiscImageCreator's own README, which is placed beside the download.
 DiscImageCreator publishes no checksum for its releases; the SHA-256 this program checks is the one recorded when the file was first downloaded.
@@ -25,7 +25,7 @@ DiscImageCreator publishes no checksum for its releases; the SHA-256 this progra
 ## Linked into the program
 
 - **Qt 6** (The Qt Company and contributors), linked statically under the LGPL-3.0. Qt's source and licence: https://www.qt.io and https://code.qt.io.
-  To use a different Qt build, rebuild Slopinator from this repository's source with `build_static.sh` against that Qt.
+  To use a different Qt build, rebuild psxrdc2 from this repository's source with `build_static.sh` against that Qt.
 - **MSYS2 / MinGW-w64 runtime and libraries** used to build it (libpng, libjpeg, libtiff, libwebp, zlib, zstd, harfbuzz, freetype, pcre2 and others), each under its own permissive licence.
 - **NSIS** builds the installer (zlib/libpng licence).
 

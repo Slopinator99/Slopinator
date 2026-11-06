@@ -363,8 +363,8 @@ QWidget *MainWindow::buildSettingsTab()
     connect(getRedumper, &QPushButton::clicked, this, [this] { downloadTool(setup::Tool::Redumper); });
     auto *about = new QPushButton("About && credits");
     connect(about, &QPushButton::clicked, this, [this] {
-        QMessageBox::about(this, "About Slopinator",
-            "<b>Slopinator</b> (MIT licence, Slopinator99)<br><br>"
+        QMessageBox::about(this, "About psxrdc2",
+            "<b>psxrdc2</b> (MIT licence, Slopinator99)<br><br>"
             "Built on the work of:<ul>"
             "<li><a href='http://redump.org'>Redump</a>: the database and dumping standards</li>"
             "<li><a href='https://github.com/superg/redumper'>redumper</a> by superg (GPL-3.0)</li>"

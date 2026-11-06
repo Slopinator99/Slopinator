@@ -1,4 +1,4 @@
-# Slopinator
+# psxrdc2
 
 A Windows tool for dumping CD and DVD game discs accurately and checking the result against [Redump](http://redump.org).
 It drives [redumper](https://github.com/superg/redumper) as a hidden helper, verifies the dump against the Redump DAT,
@@ -58,7 +58,7 @@ your config and any dump files. The program recreates all of that on its own.
 
 ## Credits
 
-Slopinator stands on the work of others: [Redump](http://redump.org) (the database and the dumping standards),
+psxrdc2 stands on the work of others: [Redump](http://redump.org) (the database and the dumping standards),
 [redumper](https://github.com/superg/redumper) by superg, [DiscImageCreator](https://github.com/saramibreak/DiscImageCreator) by saramibreak,
 chdman from [MAME](https://github.com/mamedev/mame), and [Qt](https://www.qt.io). None of those tools are part of this repository;
 they are downloaded on request and keep their own licences. Full list and licence details: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
